@@ -106,7 +106,6 @@ enum algos {
 	ALGO_PLUCK,       /* Pluck (Supcoin) */
 	ALGO_QUBIT,       /* Qubit */
 	ALGO_SCRYPT,      /* scrypt */
-	ALGO_SCRYPTJANE,  /* Chacha */
 	ALGO_SHAVITE3,    /* Shavite3 */
 	ALGO_SHA256D,     /* SHA-256d */
 	ALGO_SIA,         /* Blake2-B */
@@ -161,7 +160,6 @@ static const char *algo_names[] = {
 	"pluck",
 	"qubit",
 	"scrypt",
-	"scrypt-jane",
 	"shavite3",
 	"sha256d",
 	"sia",
@@ -317,7 +315,6 @@ Options:\n\
                           qubit        Qubit\n\
                           scrypt       scrypt(1024, 1, 1) (default)\n\
                           scrypt:N     scrypt(N, 1, 1)\n\
-                          scrypt-jane:N (with N factor from 4 to 30)\n\
                           shavite3     Shavite3\n\
                           sha256d      SHA-256d\n\
                           sia          Blake2-B\n\
@@ -508,10 +505,7 @@ static void affine_to_cpu_mask(int id, unsigned long mask) { }
 
 void get_currentalgo(char* buf, int sz)
 {
-	if (opt_algo == ALGO_SCRYPTJANE)
-		snprintf(buf, sz, "%s:%d", algo_names[opt_algo], opt_scrypt_n);
-	else
-		snprintf(buf, sz, "%s", algo_names[opt_algo]);
+        snprintf(buf, sz, "%s", algo_names[opt_algo]);
 }
 
 void proper_exit(int reason)
@@ -1033,7 +1027,6 @@ static int share_result(int result, struct work *work, const char *reason)
 	case ALGO_CRYPTOLIGHT:
 	case ALGO_CRYPTONIGHT:
 	case ALGO_PLUCK:
-	case ALGO_SCRYPTJANE:
 		sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", hashrate);
 		applog(LOG_NOTICE, "accepted: %lu/%lu (%s), %s H/s %s",
 			accepted_count, accepted_count + rejected_count,
@@ -1786,7 +1779,6 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 			case ALGO_DROP:
 			case ALGO_JHA:
 			case ALGO_SCRYPT:
-			case ALGO_SCRYPTJANE:
 			case ALGO_NEOSCRYPT:
 			case ALGO_PLUCK:
 			case ALGO_YESCRYPT:
@@ -2113,7 +2105,6 @@ static void *miner_thread(void *userdata)
 			case ALGO_AXIOM:
 			case ALGO_CRYPTOLIGHT:
 			case ALGO_CRYPTONIGHT:
-			case ALGO_SCRYPTJANE:
 				max64 = 0x40LL;
 				break;
 			case ALGO_DROP:
@@ -2268,9 +2259,6 @@ static void *miner_thread(void *userdata)
 		case ALGO_SCRYPT:
 			rc = scanhash_scrypt(thr_id, &work, max_nonce, &hashes_done, scratchbuf, opt_scrypt_n);
 			break;
-		case ALGO_SCRYPTJANE:
-			rc = scanhash_scryptjane(opt_scrypt_n, thr_id, &work, max_nonce, &hashes_done);
-			break;
 		case ALGO_SHAVITE3:
 			rc = scanhash_ink(thr_id, &work, max_nonce, &hashes_done);
 			break;
@@ -2354,7 +2342,6 @@ static void *miner_thread(void *userdata)
 			case ALGO_CRYPTOLIGHT:
 			case ALGO_CRYPTONIGHT:
 			case ALGO_PLUCK:
-			case ALGO_SCRYPTJANE:
 				applog(LOG_INFO, "CPU #%d: %.2f H/s", thr_id, thr_hashrates[thr_id]);
 				break;
 			default:
@@ -2374,7 +2361,6 @@ static void *miner_thread(void *userdata)
 				case ALGO_CRYPTOLIGHT:
 				case ALGO_CRYPTONIGHT:
 				case ALGO_AXIOM:
-				case ALGO_SCRYPTJANE:
 					sprintf(s, "%.3f", hashrate);
 					applog(LOG_NOTICE, "Total: %s H/s", s);
 					break;
@@ -2851,8 +2837,6 @@ void parse_arg(int key, char *arg)
 				i = opt_algo = ALGO_LYRA2;
 			else if (!strcasecmp("lyra2v2", arg))
 				i = opt_algo = ALGO_LYRA2REV2;
-			else if (!strcasecmp("scryptjane", arg))
-				i = opt_algo = ALGO_SCRYPTJANE;
 			else if (!strcasecmp("sibcoin", arg))
 				i = opt_algo = ALGO_SIB;
 			else if (!strcasecmp("timetravel10", arg))
@@ -2867,8 +2851,6 @@ void parse_arg(int key, char *arg)
 		}
 		if (!opt_nfactor && opt_algo == ALGO_SCRYPT)
 			opt_nfactor = 9;
-		if (opt_algo == ALGO_SCRYPTJANE && opt_scrypt_n == 0)
-			opt_scrypt_n = 5;
 		break;
 	case 'b':
 		p = strstr(arg, ":");
